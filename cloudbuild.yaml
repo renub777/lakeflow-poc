@@ -21,17 +21,17 @@ steps:
 
 # Step 3: Copy changed files to deployment folder
 - name: 'ubuntu'
- entrypoint: 'bash'
- args:
-   - '-c'
-   - |
-     mkdir -p deploy_artifacts
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+       mkdir -p deploy_artifacts
 
-     while read file; do
-       if [ -f "$file" ]; then
-         echo "Copying $file"
-         mkdir -p deploy_artifacts/$(dirname "$file")
-         cp "$file" "deploy_artifacts/$file"
+       while read file; do
+         if [ -f "$file" ]; then
+           echo "Copying $file"
+          mkdir -p deploy_artifacts/$(dirname "$file")
+           cp "$file" "deploy_artifacts/$file"
        fi
      done < changed_files.txt
 
@@ -40,22 +40,22 @@ steps:
 
 # Step 4: Install Databricks CLI
 - name: 'python:3.11'
- entrypoint: 'bash'
- args:
-   - '-c'
-   - |
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
      pip install databricks-cli
 
 # Step 5: Deploy changed notebooks
 - name: 'python:3.11'
- entrypoint: 'bash'
- env:
-   - 'DATABRICKS_HOST=${_DATABRICKS_HOST}'
-   - 'DATABRICKS_TOKEN=${_DATABRICKS_TOKEN}'
- args:
-   - '-c'
-   - |
-     echo "Deploying changed notebooks"
+  entrypoint: 'bash'
+  env:
+    - 'DATABRICKS_HOST=${_DATABRICKS_HOST}'
+    - 'DATABRICKS_TOKEN=${_DATABRICKS_TOKEN}'
+  args:
+    - '-c'
+    - |
+      echo "Deploying changed notebooks"
 
      if [ -d deploy_artifacts/notebooks ]; then
        echo "Notebook changes detected"
@@ -67,14 +67,14 @@ steps:
 
 # Step 6: Deploy Lakeflow definitions
 - name: 'python:3.11'
- entrypoint: 'bash'
- env:
-   - 'DATABRICKS_HOST=${_DATABRICKS_HOST}'
-   - 'DATABRICKS_TOKEN=${_DATABRICKS_TOKEN}'
- args:
-   - '-c'
-   - |
-     echo "Deploying Lakeflow pipelines"
+  entrypoint: 'bash'
+  env:
+    - 'DATABRICKS_HOST=${_DATABRICKS_HOST}'
+    - 'DATABRICKS_TOKEN=${_DATABRICKS_TOKEN}'
+  args:
+    - '-c'
+    - |
+      echo "Deploying Lakeflow pipelines"
 
      if [ -d deploy_artifacts/lakeflow ]; then
        echo "Lakeflow changes detected"
@@ -86,8 +86,8 @@ steps:
 
 # Step 7: Completion
 - name: 'ubuntu'
- entrypoint: 'bash'
- args:
-   - '-c'
-   - |
-     echo "Cloud Build deployment completed successfully"
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      echo "Cloud Build deployment completed successfully"
