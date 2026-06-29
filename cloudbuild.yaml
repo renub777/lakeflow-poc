@@ -1,23 +1,93 @@
 steps:
-  # Docker Build
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/my-docker-repo/myimage', 
-           '.']
 
-  # Docker Push
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/my-docker-repo/myimage']
+# Step 1: Checkout repository
+- name: 'gcr.io/cloud-builders/git'
+ entrypoint: 'bash'
+ args:
+   - '-c'
+   - |
+     echo "Checking out repository"
+     git fetch --depth=2 origin
 
-  # Entrypoint, timeout and environment variables
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    timeout: 240s
-    args: ['compute', 'instances', 
-           'create-with-container', 'my-vm-name',
-           '--container-image', 
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/my-docker-repo/myimage']
-    env:
-      - 'CLOUDSDK_COMPUTE_REGION=us-central1'
-      - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+# Step 2: Get changed files
+- name: 'ubuntu'
+ entrypoint: 'bash'
+ args:
+   - '-c'
+   - |
+     echo "Getting changed files"
+     git diff --name-only HEAD~1 HEAD > changed_files.txt
+     cat changed_files.txt
+
+# Step 3: Copy changed files to deployment folder
+- name: 'ubuntu'
+ entrypoint: 'bash'
+ args:
+   - '-c'
+   - |
+     mkdir -p deploy_artifacts
+
+     while read file; do
+       if [ -f "$file" ]; then
+         echo "Copying $file"
+         mkdir -p deploy_artifacts/$(dirname "$file")
+         cp "$file" "deploy_artifacts/$file"
+       fi
+     done < changed_files.txt
+
+     echo "Artifacts prepared"
+     find deploy_artifacts -type f
+
+# Step 4: Install Databricks CLI
+- name: 'python:3.11'
+ entrypoint: 'bash'
+ args:
+   - '-c'
+   - |
+     pip install databricks-cli
+
+# Step 5: Deploy changed notebooks
+- name: 'python:3.11'
+ entrypoint: 'bash'
+ env:
+   - 'DATABRICKS_HOST=${_DATABRICKS_HOST}'
+   - 'DATABRICKS_TOKEN=${_DATABRICKS_TOKEN}'
+ args:
+   - '-c'
+   - |
+     echo "Deploying changed notebooks"
+
+     if [ -d deploy_artifacts/notebooks ]; then
+       echo "Notebook changes detected"
+       # Example deployment command
+       # databricks workspace import_dir deploy_artifacts/notebooks /Shared/notebooks --overwrite
+     else
+       echo "No notebook changes"
+     fi
+
+# Step 6: Deploy Lakeflow definitions
+- name: 'python:3.11'
+ entrypoint: 'bash'
+ env:
+   - 'DATABRICKS_HOST=${_DATABRICKS_HOST}'
+   - 'DATABRICKS_TOKEN=${_DATABRICKS_TOKEN}'
+ args:
+   - '-c'
+   - |
+     echo "Deploying Lakeflow pipelines"
+
+     if [ -d deploy_artifacts/lakeflow ]; then
+       echo "Lakeflow changes detected"
+       # Example deployment command
+       # databricks bundle deploy -t dev
+     else
+       echo "No Lakeflow changes"
+     fi
+
+# Step 7: Completion
+- name: 'ubuntu'
+ entrypoint: 'bash'
+ args:
+   - '-c'
+   - |
+     echo "Cloud Build deployment completed successfully"

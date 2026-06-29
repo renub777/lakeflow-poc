@@ -1,0 +1,9 @@
+bundle:
+ name: lakeflow-poc
+include:
+ - resources/*.yml
+targets:
+ dev:
+   default: true
+   workspace:
+     host:https://dbc-1dca7c31-775c.cloud.databricks.com/browse/folders/workspace
