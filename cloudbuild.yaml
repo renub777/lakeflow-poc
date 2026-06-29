@@ -2,22 +2,22 @@ steps:
 
 # Step 1: Checkout repository
 - name: 'gcr.io/cloud-builders/git'
- entrypoint: 'bash'
- args:
-   - '-c'
-   - |
-     echo "Checking out repository"
-     git fetch --depth=2 origin
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+       echo "Checking out repository"
+       git fetch --depth=2 origin
 
 # Step 2: Get changed files
 - name: 'ubuntu'
- entrypoint: 'bash'
- args:
-   - '-c'
-   - |
-     echo "Getting changed files"
-     git diff --name-only HEAD~1 HEAD > changed_files.txt
-     cat changed_files.txt
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+       echo "Getting changed files"
+       git diff --name-only HEAD~1 HEAD > changed_files.txt
+       cat changed_files.txt
 
 # Step 3: Copy changed files to deployment folder
 - name: 'ubuntu'
