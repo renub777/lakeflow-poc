@@ -1,13 +1,11 @@
-steps:
-
 # Step 1: Checkout repository
 - name: 'gcr.io/cloud-builders/git'
   entrypoint: 'bash'
   args:
     - '-c'
     - |
-       echo "Checking out repository"
-       git fetch --depth=2 origin
+      echo "Checking out repository"
+      git fetch --depth=2 origin
 
 # Step 2: Get changed files
 - name: 'ubuntu'
@@ -15,9 +13,9 @@ steps:
   args:
     - '-c'
     - |
-       echo "Getting changed files"
-       git diff --name-only HEAD~1 HEAD > changed_files.txt
-       cat changed_files.txt
+      echo "Getting changed files"
+      git diff --name-only HEAD~1 HEAD > changed_files.txt
+      cat changed_files.txt
 
 # Step 3: Copy changed files to deployment folder
 - name: 'ubuntu'
@@ -25,18 +23,18 @@ steps:
   args:
     - '-c'
     - |
-       mkdir -p deploy_artifacts
+      mkdir -p deploy_artifacts
 
-       while read file; do
-         if [ -f "$file" ]; then
-           echo "Copying $file"
+      while read file; do
+        if [ -f "$file" ]; then
+          echo "Copying $file"
           mkdir -p deploy_artifacts/$(dirname "$file")
-           cp "$file" "deploy_artifacts/$file"
-       fi
-     done < changed_files.txt
+          cp "$file" "deploy_artifacts/$file"
+        fi
+      done < changed_files.txt
 
-     echo "Artifacts prepared"
-     find deploy_artifacts -type f
+      echo "Artifacts prepared"
+      find deploy_artifacts -type f
 
 # Step 4: Install Databricks CLI
 - name: 'python:3.11'
@@ -44,7 +42,7 @@ steps:
   args:
     - '-c'
     - |
-     pip install databricks-cli
+      pip install databricks-cli
 
 # Step 5: Deploy changed notebooks
 - name: 'python:3.11'
@@ -57,13 +55,13 @@ steps:
     - |
       echo "Deploying changed notebooks"
 
-     if [ -d deploy_artifacts/notebooks ]; then
-       echo "Notebook changes detected"
-       # Example deployment command
-       # databricks workspace import_dir deploy_artifacts/notebooks /Shared/notebooks --overwrite
-     else
-       echo "No notebook changes"
-     fi
+      if [ -d deploy_artifacts/notebooks ]; then
+        echo "Notebook changes detected"
+        # Example deployment command
+        # databricks workspace import_dir deploy_artifacts/notebooks /Shared/notebooks --overwrite
+      else
+        echo "No notebook changes"
+      fi
 
 # Step 6: Deploy Lakeflow definitions
 - name: 'python:3.11'
@@ -76,13 +74,13 @@ steps:
     - |
       echo "Deploying Lakeflow pipelines"
 
-     if [ -d deploy_artifacts/lakeflow ]; then
-       echo "Lakeflow changes detected"
-       # Example deployment command
-       # databricks bundle deploy -t dev
-     else
-       echo "No Lakeflow changes"
-     fi
+      if [ -d deploy_artifacts/lakeflow ]; then
+        echo "Lakeflow changes detected"
+        # Example deployment command
+        # databricks bundle deploy -t dev
+      else
+        echo "No Lakeflow changes"
+      fi
 
 # Step 7: Completion
 - name: 'ubuntu'
