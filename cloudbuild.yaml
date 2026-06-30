@@ -2,58 +2,70 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
+  - name: 'gcr.io/cloud-builders/git'
+    script: |
+      #!/usr/bin/env bash
 
-- name: 'gcr.io/cloud-builders/git'
-  script: |
-    #!/usr/bin/env bash
+      set -e
 
-    set -e
+      ARTIFACT_DIR="/workspace/artifacts"
+      mkdir -p "${ARTIFACT_DIR}"
 
-    ARTIFACT_DIR="/workspace/artifacts"
-    mkdir -p "${ARTIFACT_DIR}"
+      CURR_SHA=$(git rev-parse HEAD)
 
-    CURR_SHA=$(git rev-parse HEAD)
+      echo "================================"
+      echo "Current SHA : ${CURR_SHA}"
+      echo "================================"
 
-    echo "================================"
-    echo "Current SHA : ${CURR_SHA}"
-    echo "================================"
+      PREV_SHA=$(gsutil cat gs://gcpcicd-bucket02/state/last_commit.txt 2>/dev/null || echo "")
 
-    PREV_SHA=$(gsutil cat gs://gcpcicd-bucket02/state/last_commit.txt 2>/dev/null || echo "")
+      echo "Previous SHA : ${PREV_SHA}"
 
-    echo "Previous SHA : ${PREV_SHA}"
+      files=""
 
-    files=""
+      if [ -n "${PREV_SHA}" ]; then
 
-    if [ -n "${PREV_SHA}" ]; then
+        echo "Checking previous commit..."
 
-      echo "Checking previous commit..."
+        if git cat-file -e "${PREV_SHA}^{commit}" 2>/dev/null; then
 
-      if git cat-file -e "${PREV_SHA}^{commit}" 2>/dev/null; then
+          echo "Previous commit found"
 
-        echo "Previous commit found"
+          files=$(git diff --name-only "${PREV_SHA}" "${CURR_SHA}" || true)
 
-        files=$(git diff --name-only "${PREV_SHA}" "${CURR_SHA}" || true)
+        else
+
+          echo "Previous commit not present locally"
+          echo "Using files from current commit"
+
+          files=$(git show --name-only --pretty="" HEAD)
+
+        fi
 
       else
 
-        echo "Previous commit not present locally"
-        echo "Using files from current commit"
+        echo "No previous build found"
 
         files=$(git show --name-only --pretty="" HEAD)
 
       fi
 
-    else
+      echo "================================"
+      echo "Changed Files"
+      echo "================================"
+      echo "${files}"
 
-      echo "No previous build found"
+      if [ -z "${files}" ]; then
+        echo "No changed files detected."
+        exit 0
+      fi
 
-      files=$(git show --name-only --pretty="" HEAD)
+      echo "${files}" > "${ARTIFACT_DIR}/changed_files.txt"
 
-    fi
+      echo "Saving current SHA..."
+      echo "${CURR_SHA}" > /tmp/last_commit.txt
 
-    echo "================================"
-    echo "Changed Files"
-    echo "================================"
-    echo "${files}"
+      gsutil cp /tmp/last_commit.txt \
+        gs://gcpcicd-bucket02/state/last_commit.txt
 
-    if [ -z "$
+      echo "Build step completed successfully."
