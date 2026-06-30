@@ -2,124 +2,82 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-
 - name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'bash'
-  args:
-    - '-c'
-    - |
-      set -e
+  script: |
+    #!/usr/bin/env bash
+    set -e
 
-      ARTIFACT_DIR="/workspace/artifacts"
-      mkdir -p "$$ARTIFACT_DIR"
+    ARTIFACT_DIR="/workspace/artifacts"
+    mkdir -p "${ARTIFACT_DIR}"
 
-      CURR_SHA=$$(git rev-parse HEAD)
+    CURR_SHA=$(git rev-parse HEAD)
+    echo "Current SHA: ${CURR_SHA}"
 
-      echo "================================="
-      echo "Current SHA: $$CURR_SHA"
-      echo "================================="
+    PREV_SHA=$(gsutil cat gs://gcpcicd-bucket01/state/last_commit.txt 2>/dev/null || echo "")
 
-      PREV_SHA=$$(gsutil cat gs://gcpcicd-bucket01/state/last_commit.txt 2>/dev/null || echo "")
+    echo "Previous SHA: ${PREV_SHA}"
 
-      echo "Previous SHA: $$PREV_SHA"
+    if [ -n "${PREV_SHA}" ]; then
+      echo "Comparing commits..."
 
-      files=""
+      files=$(git diff --name-only "${PREV_SHA}" "${CURR_SHA}" || true)
 
-      if [ -n "$$PREV_SHA" ]; then
+    else
+      echo "No previous build found."
 
-        echo "Checking if previous commit exists locally..."
+      files=$(git diff-tree --no-commit-id --name-only -r HEAD)
+    fi
 
-        if git cat-file -e "$$PREV_SHA^{commit}" 2>/dev/null; then
+    echo "Changed files:"
+    echo "${files}"
 
-          echo "Previous commit found."
-          files=$$(git diff --name-only "$$PREV_SHA" "$$CURR_SHA")
+    if [ -z "${files}" ]; then
+      echo "No changed files found."
+      touch /workspace/no_changes
+      exit 0
+    fi
 
-        else
+    while read -r file
+    do
+      [ -z "${file}" ] && continue
 
-          echo "Previous commit not available in local git history."
-          echo "Falling back to current commit files."
+      if [ -f "${file}" ]; then
+        mkdir -p "${ARTIFACT_DIR}/$(dirname "${file}")"
+        cp "${file}" "${ARTIFACT_DIR}/${file}"
 
-          files=$$(git diff-tree --no-commit-id --name-only -r HEAD)
-        fi
-
-      else
-
-        echo "No previous build state found."
-        files=$$(git diff-tree --no-commit-id --name-only -r HEAD)
-
+        echo "Copied: ${file}"
       fi
+    done <<< "${files}"
 
-      echo "================================="
-      echo "Changed files:"
-      echo "$$files"
-      echo "================================="
+    echo "${CURR_SHA}" > /workspace/current_commit.txt
 
-      if [ -z "$$files" ]; then
-        echo "No changed files found."
-        touch /workspace/no_changes
-        exit 0
-      fi
-
-      while read -r file
-      do
-
-        [ -z "$$file" ] && continue
-
-        if [ -f "$$file" ]; then
-
-          DIRNAME=$$(dirname "$$file")
-
-          mkdir -p "$$ARTIFACT_DIR/$$DIRNAME"
-
-          cp "$$file" "$$ARTIFACT_DIR/$$file"
-
-          echo "Copied: $$file"
-
-        fi
-
-      done <<< "$$files"
-
-      echo "$$CURR_SHA" > /workspace/current_commit.txt
-
-      echo "Generated artifact files:"
-
-      find "$$ARTIFACT_DIR" -type f
+    echo "Artifact contents:"
+    find "${ARTIFACT_DIR}" -type f
 
 - name: 'gcr.io/cloud-builders/gsutil'
-  entrypoint: 'bash'
-  args:
-    - '-c'
-    - |
-      if [ -f /workspace/no_changes ]; then
-        echo "Skipping upload because no changes were detected."
-        exit 0
-      fi
+  script: |
+    #!/usr/bin/env bash
+    set -e
 
-      echo "Artifact contents:"
-      ls -R /workspace/artifacts || true
+    if [ -f /workspace/no_changes ]; then
+      echo "No changes detected. Skipping upload."
+      exit 0
+    fi
 
-      FILE_COUNT=$$(find /workspace/artifacts -type f | wc -l)
+    FILE_COUNT=$(find /workspace/artifacts -type f | wc -l)
 
-      echo "Artifact count: $$FILE_COUNT"
+    echo "Artifact count: ${FILE_COUNT}"
 
-      if [ "$$FILE_COUNT" -gt 0 ]; then
-
-        gsutil -m cp -r \
+    if [ "${FILE_COUNT}" -gt 0 ]; then
+      gsutil -m cp -r \
         /workspace/artifacts/* \
-        gs://gcpcicd-bucket01/build-artifacts/$BUILD_ID/
+        gs://gcpcicd-bucket01/build-artifacts/${BUILD_ID}/
 
-        echo "Artifacts uploaded."
+      echo "Artifacts uploaded."
+    fi
 
-        gsutil cp \
-        /workspace/current_commit.txt \
-        gs://gcpcicd-bucket01/state/last_commit.txt
+    gsutil cp \
+      /workspace/current_commit.txt \
+      gs://gcpcicd-bucket01/state/last_commit.txt
 
-        echo "Updated last_commit.txt"
-
-      else
-
-        echo "No artifact files available for upload."
-
-      fi
-
-timeout: '
+timeout: '1200s'
