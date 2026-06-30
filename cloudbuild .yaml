@@ -17,7 +17,7 @@ steps:
       CURR_SHA=$$(git rev-parse HEAD)
       echo "$$CURR_SHA"
 
-      PREV_SHA=$$(gsutil cat gs://gcpcicd-bucket/state/last_commit.txt 2>/dev/null || echo "")
+      PREV_SHA=$$(gsutil cat gs://gcpcicd-bucket01/state/last_commit.txt 2>/dev/null || echo "")
 
       echo "Previous SHA: $$PREV_SHA"
       echo "Current SHA: $$CURR_SHA"
@@ -68,10 +68,10 @@ steps:
         echo "No files to upload"
       else
         gsutil -m cp -r /workspace/artifacts/* \
-        gs://gcpcicd-bucket/build-artifacts/$BUILD_ID/
+        gs://gcpcicd-bucket01/build-artifacts/$BUILD_ID/
       fi
 
       gsutil cp /workspace/current_commit.txt \
-      gs://gcpcicd-bucket/state/last_commit.txt
+      gs://gcpcicd-bucket01/state/last_commit.txt
 
 timeout: '1200s'
