@@ -8,9 +8,6 @@ steps:
 
       set -e
 
-      ARTIFACT_DIR="/workspace/artifacts"
-      mkdir -p "${ARTIFACT_DIR}"
-
       CURR_SHA=$(git rev-parse HEAD)
 
       echo "================================"
@@ -35,16 +32,16 @@ steps:
 
         else
 
-          echo "Previous commit not present locally"
+          echo "Previous commit not found locally"
           echo "Using files from current commit"
 
           files=$(git show --name-only --pretty="" HEAD)
-
         fi
 
       else
 
         echo "No previous build found"
+
         files=$(git show --name-only --pretty="" HEAD)
 
       fi
@@ -55,7 +52,8 @@ steps:
       echo "${files}"
 
       if [ -z "${files}" ]; then
-        echo "No changed files detected."
+
+        echo "No changed files detected"
 
         echo "${CURR_SHA}" > /tmp/last_commit.txt
 
@@ -65,22 +63,28 @@ steps:
         exit 0
       fi
 
-      echo "${files}" > "${ARTIFACT_DIR}/changed_files.txt"
+      echo "================================"
+      echo "Uploading Changed Files"
+      echo "================================"
 
-      echo "Uploading artifact..."
+      for file in ${files}; do
 
-      gsutil cp "${ARTIFACT_DIR}/changed_files.txt" \
-        "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}_changed_files.txt"
+        if [ -f "${file}" ]; then
 
-      echo "Saving current SHA..."
+          echo "Uploading ${file}"
+
+          gsutil cp "${file}" \
+            "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}/${file}"
+
+        else
+
+          echo "Skipping ${file} (not a regular file)"
+
+        fi
+
+      done
 
       echo "${CURR_SHA}" > /tmp/last_commit.txt
 
       gsutil cp /tmp/last_commit.txt \
-        gs://gcpcicd-bucket02/state/last_commit.txt
-
-      echo "================================"
-      echo "Build completed successfully"
-      echo "Artifact uploaded:"
-      echo "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}_changed_files.txt"
-      echo "================================"
+        gs:
