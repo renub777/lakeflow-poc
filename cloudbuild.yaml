@@ -14,38 +14,54 @@ steps:
       mkdir -p "$$ARTIFACT_DIR"
 
       CURR_SHA=$$(git rev-parse HEAD)
+
+      echo "================================="
       echo "Current SHA: $$CURR_SHA"
+      echo "================================="
 
       PREV_SHA=$$(gsutil cat gs://gcpcicd-bucket01/state/last_commit.txt 2>/dev/null || echo "")
 
       echo "Previous SHA: $$PREV_SHA"
 
+      files=""
+
       if [ -n "$$PREV_SHA" ]; then
-        echo "Comparing commits..."
 
-        files=$$(git diff --name-only "$$PREV_SHA" "$$CURR_SHA" || true)
+        echo "Checking if previous commit exists locally..."
 
-        if [ -z "$$files" ]; then
-          echo "No changed files found."
-          touch /workspace/no_changes
-          exit 0
+        if git cat-file -e "$$PREV_SHA^{commit}" 2>/dev/null; then
+
+          echo "Previous commit found."
+          files=$$(git diff --name-only "$$PREV_SHA" "$$CURR_SHA")
+
+        else
+
+          echo "Previous commit not available in local git history."
+          echo "Falling back to current commit files."
+
+          files=$$(git diff-tree --no-commit-id --name-only -r HEAD)
         fi
+
       else
-        echo "First build."
 
-        files=$$(git ls-files)
+        echo "No previous build state found."
+        files=$$(git diff-tree --no-commit-id --name-only -r HEAD)
 
-        if [ -z "$$files" ]; then
-          echo "Repository is empty."
-          touch /workspace/no_changes
-          exit 0
-        fi
       fi
 
+      echo "================================="
       echo "Changed files:"
       echo "$$files"
+      echo "================================="
 
-      while read -r file; do
+      if [ -z "$$files" ]; then
+        echo "No changed files found."
+        touch /workspace/no_changes
+        exit 0
+      fi
+
+      while read -r file
+      do
 
         [ -z "$$file" ] && continue
 
@@ -65,8 +81,9 @@ steps:
 
       echo "$$CURR_SHA" > /workspace/current_commit.txt
 
-      echo "Artifact contents:"
-      find "$$ARTIFACT_DIR"
+      echo "Generated artifact files:"
+
+      find "$$ARTIFACT_DIR" -type f
 
 - name: 'gcr.io/cloud-builders/gsutil'
   entrypoint: 'bash'
@@ -74,21 +91,35 @@ steps:
     - '-c'
     - |
       if [ -f /workspace/no_changes ]; then
-        echo "No changes detected."
+        echo "Skipping upload because no changes were detected."
         exit 0
       fi
+
+      echo "Artifact contents:"
+      ls -R /workspace/artifacts || true
 
       FILE_COUNT=$$(find /workspace/artifacts -type f | wc -l)
 
       echo "Artifact count: $$FILE_COUNT"
 
       if [ "$$FILE_COUNT" -gt 0 ]; then
-        gsutil -m cp -r /workspace/artifacts/* \
-          gs://gcpcicd-bucket01/build-artifacts/$BUILD_ID/
-      fi
 
-      gsutil cp \
+        gsutil -m cp -r \
+        /workspace/artifacts/* \
+        gs://gcpcicd-bucket01/build-artifacts/$BUILD_ID/
+
+        echo "Artifacts uploaded."
+
+        gsutil cp \
         /workspace/current_commit.txt \
         gs://gcpcicd-bucket01/state/last_commit.txt
 
-timeout: '1200s'
+        echo "Updated last_commit.txt"
+
+      else
+
+        echo "No artifact files available for upload."
+
+      fi
+
+timeout: '
