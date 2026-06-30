@@ -45,7 +45,6 @@ steps:
       else
 
         echo "No previous build found"
-
         files=$(git show --name-only --pretty="" HEAD)
 
       fi
@@ -57,15 +56,31 @@ steps:
 
       if [ -z "${files}" ]; then
         echo "No changed files detected."
+
+        echo "${CURR_SHA}" > /tmp/last_commit.txt
+
+        gsutil cp /tmp/last_commit.txt \
+          gs://gcpcicd-bucket02/state/last_commit.txt
+
         exit 0
       fi
 
       echo "${files}" > "${ARTIFACT_DIR}/changed_files.txt"
 
+      echo "Uploading artifact..."
+
+      gsutil cp "${ARTIFACT_DIR}/changed_files.txt" \
+        "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}_changed_files.txt"
+
       echo "Saving current SHA..."
+
       echo "${CURR_SHA}" > /tmp/last_commit.txt
 
       gsutil cp /tmp/last_commit.txt \
         gs://gcpcicd-bucket02/state/last_commit.txt
 
-      echo "Build step completed successfully."
+      echo "================================"
+      echo "Build completed successfully"
+      echo "Artifact uploaded:"
+      echo "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}_changed_files.txt"
+      echo "================================"
