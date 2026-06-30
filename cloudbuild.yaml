@@ -65,7 +65,7 @@ steps:
         echo "${CURR_SHA}" > /tmp/last_commit.txt
 
         gsutil cp /tmp/last_commit.txt \
-          gs://gcpcid-bucket02/state/last_commit.txt
+          gs://gcpcicd-bucket02/state/last_commit.txt
 
         exit 0
 
@@ -86,7 +86,7 @@ steps:
           echo "Uploading ${file}"
 
           gsutil cp "${file}" \
-            "gs://gcpcid-bucket02/artifacts/${CURR_SHA}/${file}"
+            "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}/${file}"
 
         else
 
@@ -99,7 +99,7 @@ steps:
       echo "${CURR_SHA}" > /tmp/last_commit.txt
 
       gsutil cp /tmp/last_commit.txt \
-        gs://gcpcid-bucket02/state/last_commit.txt
+        gs://gcpcicd-bucket02/state/last_commit.txt
 
       echo "================================"
       echo "Upload completed"
