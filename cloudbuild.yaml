@@ -18,7 +18,7 @@ steps:
     echo "Current SHA : ${CURR_SHA}"
     echo "================================"
 
-    PREV_SHA=$(gsutil cat gs://gcpcicd-bucket01/state/last_commit.txt 2>/dev/null || echo "")
+    PREV_SHA=$(gsutil cat gs://gcpcicd-bucket02/state/last_commit.txt 2>/dev/null || echo "")
 
     echo "Previous SHA : ${PREV_SHA}"
 
