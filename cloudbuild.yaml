@@ -3,7 +3,6 @@ options:
 
 steps:
 
-# Step 1: Identify changed files
 - name: 'gcr.io/cloud-builders/git'
   entrypoint: 'bash'
   args:
@@ -14,10 +13,6 @@ steps:
       ARTIFACT_DIR="/workspace/artifacts"
       mkdir -p "$$ARTIFACT_DIR"
 
-      echo "Fetching Git history..."
-      git fetch --unshallow || true
-      git fetch --all || true
-
       CURR_SHA=$$(git rev-parse HEAD)
       echo "Current SHA: $$CURR_SHA"
 
@@ -26,30 +21,22 @@ steps:
       echo "Previous SHA: $$PREV_SHA"
 
       if [ -n "$$PREV_SHA" ]; then
+        echo "Comparing commits..."
 
-        if ! git cat-file -e "$$PREV_SHA^{commit}" 2>/dev/null; then
-          echo "Previous commit not found locally."
-          touch /workspace/no_changes
-          exit 0
-        fi
-
-        echo "Finding changed files..."
-
-        files=$$(git diff --name-only "$$PREV_SHA" "$$CURR_SHA")
+        files=$$(git diff --name-only "$$PREV_SHA" "$$CURR_SHA" || true)
 
         if [ -z "$$files" ]; then
-          echo "No changes found."
+          echo "No changed files found."
           touch /workspace/no_changes
           exit 0
         fi
-
       else
-        echo "No previous build state found."
+        echo "First build."
 
-        files=$$(git diff-tree --no-commit-id --name-only -r HEAD)
+        files=$$(git ls-files)
 
         if [ -z "$$files" ]; then
-          echo "No files changed."
+          echo "Repository is empty."
           touch /workspace/no_changes
           exit 0
         fi
@@ -59,6 +46,49 @@ steps:
       echo "$$files"
 
       while read -r file; do
+
         [ -z "$$file" ] && continue
 
-        if [ -e "$
+        if [ -f "$$file" ]; then
+
+          DIRNAME=$$(dirname "$$file")
+
+          mkdir -p "$$ARTIFACT_DIR/$$DIRNAME"
+
+          cp "$$file" "$$ARTIFACT_DIR/$$file"
+
+          echo "Copied: $$file"
+
+        fi
+
+      done <<< "$$files"
+
+      echo "$$CURR_SHA" > /workspace/current_commit.txt
+
+      echo "Artifact contents:"
+      find "$$ARTIFACT_DIR"
+
+- name: 'gcr.io/cloud-builders/gsutil'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      if [ -f /workspace/no_changes ]; then
+        echo "No changes detected."
+        exit 0
+      fi
+
+      FILE_COUNT=$$(find /workspace/artifacts -type f | wc -l)
+
+      echo "Artifact count: $$FILE_COUNT"
+
+      if [ "$$FILE_COUNT" -gt 0 ]; then
+        gsutil -m cp -r /workspace/artifacts/* \
+          gs://gcpcicd-bucket01/build-artifacts/$BUILD_ID/
+      fi
+
+      gsutil cp \
+        /workspace/current_commit.txt \
+        gs://gcpcicd-bucket01/state/last_commit.txt
+
+timeout: '1200s'
