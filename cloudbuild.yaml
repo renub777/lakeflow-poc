@@ -8,13 +8,18 @@ steps:
 
       set -e
 
+      echo "Fetching git history..."
+
+      git fetch --all || true
+      git fetch --unshallow || true
+
       CURR_SHA=$(git rev-parse HEAD)
 
       echo "================================"
       echo "Current SHA : ${CURR_SHA}"
       echo "================================"
 
-      PREV_SHA=$(gsutil cat gs://gcpcicd-bucket02/state/last_commit.txt 2>/dev/null || echo "")
+      PREV_SHA=$(gsutil cat gs://gcpcid-bucket02/state/last_commit.txt 2>/dev/null || echo "")
 
       echo "Previous SHA : ${PREV_SHA}"
 
@@ -24,7 +29,7 @@ steps:
 
         echo "Checking previous commit..."
 
-        if git cat-file -e "${PREV_SHA}^{commit}" 2>/dev/null; then
+        if git rev-parse --verify "${PREV_SHA}^{commit}" >/dev/null 2>&1; then
 
           echo "Previous commit found"
 
@@ -32,10 +37,11 @@ steps:
 
         else
 
-          echo "Previous commit not found locally"
-          echo "Using files from current commit"
+          echo "Previous commit still not found"
+          echo "Using current commit files"
 
           files=$(git show --name-only --pretty="" HEAD)
+
         fi
 
       else
@@ -49,7 +55,8 @@ steps:
       echo "================================"
       echo "Changed Files"
       echo "================================"
-      echo "${files}"
+
+      printf '%s\n' "${files}"
 
       if [ -z "${files}" ]; then
 
@@ -58,33 +65,44 @@ steps:
         echo "${CURR_SHA}" > /tmp/last_commit.txt
 
         gsutil cp /tmp/last_commit.txt \
-          gs://gcpcicd-bucket02/state/last_commit.txt
+          gs://gcpcid-bucket02/state/last_commit.txt
 
         exit 0
+
       fi
 
       echo "================================"
       echo "Uploading Changed Files"
       echo "================================"
 
-      for file in ${files}; do
+      while IFS= read -r file; do
+
+        if [ -z "${file}" ]; then
+          continue
+        fi
 
         if [ -f "${file}" ]; then
 
           echo "Uploading ${file}"
 
           gsutil cp "${file}" \
-            "gs://gcpcicd-bucket02/artifacts/${CURR_SHA}/${file}"
+            "gs://gcpcid-bucket02/artifacts/${CURR_SHA}/${file}"
 
         else
 
-          echo "Skipping ${file} (not a regular file)"
+          echo "Skipping ${file} (file not found)"
 
         fi
 
-      done
+      done <<< "${files}"
 
       echo "${CURR_SHA}" > /tmp/last_commit.txt
 
       gsutil cp /tmp/last_commit.txt \
-        gs:
+        gs://gcpcid-bucket02/state/last_commit.txt
+
+      echo "================================"
+      echo "Upload completed"
+      echo "Artifact Path:"
+      echo "gs://gcpcid-bucket02/artifacts/${CURR_SHA}/"
+      echo "================================"
