@@ -1,0 +1,77 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      set -e
+
+      ARTIFACT_DIR="/workspace/artifacts"
+      mkdir -p "$$ARTIFACT_DIR"
+
+      echo "Current commit:"
+      CURR_SHA=$$(git rev-parse HEAD)
+      echo "$$CURR_SHA"
+
+      PREV_SHA=$$(gsutil cat gs://gcpcicd-bucket/state/last_commit.txt 2>/dev/null || echo "")
+
+      echo "Previous SHA: $$PREV_SHA"
+      echo "Current SHA: $$CURR_SHA"
+
+      if [ -n "$$PREV_SHA" ]; then
+        echo "Comparing commits..."
+
+        files=$$(git diff --name-only "$$PREV_SHA" "$$CURR_SHA" 2>/dev/null || true)
+
+        if [ -z "$$files" ]; then
+          echo "git diff returned nothing. Falling back to current repository files."
+          files=$$(git ls-files)
+        fi
+      else
+        echo "No previous commit stored. First run."
+        files=$$(git ls-files)
+      fi
+
+      echo "Files selected:"
+      echo "$$files"
+
+      while read -r file; do
+        [ -z "$$file" ] && continue
+
+        if [ -e "$$file" ]; then
+          mkdir -p "$$ARTIFACT_DIR/$(dirname "$$file")"
+          cp -r "$$file" "$$ARTIFACT_DIR/$$file"
+
+          echo "Copied: $$file"
+        fi
+      done <<< "$$files"
+
+      echo "$$CURR_SHA" > /workspace/current_commit.txt
+
+      echo "Artifacts:"
+      find "$$ARTIFACT_DIR"
+
+- name: 'gcr.io/cloud-builders/gsutil'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      FILE_COUNT=$$(find /workspace/artifacts -type f | wc -l)
+
+      echo "Artifact count: $$FILE_COUNT"
+
+      if [ "$$FILE_COUNT" -eq 0 ]; then
+        echo "No files to upload"
+      else
+        gsutil -m cp -r /workspace/artifacts/* \
+        gs://gcpcicd-bucket/build-artifacts/$BUILD_ID/
+      fi
+
+      gsutil cp /workspace/current_commit.txt \
+      gs://gcpcicd-bucket/state/last_commit.txt
+
+timeout: '1200s'
