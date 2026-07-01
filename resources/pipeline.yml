@@ -1,0 +1,20 @@
+resources:
+
+  pipelines:
+
+    orders_pipeline:
+
+      name: orders_pipeline
+
+      catalog: main
+
+      schema: sales
+
+      development: true
+
+      continuous: true
+
+      libraries:
+
+        - file:
+            path: ../src/pipelines/orders_pipeline.py
