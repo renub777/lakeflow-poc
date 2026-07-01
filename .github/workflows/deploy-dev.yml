@@ -3,13 +3,22 @@ name: Deploy Dev
 on:
   push:
     branches:
-      - develop
+      - main
 
 jobs:
   deploy:
+
     runs-on: ubuntu-latest
 
     steps:
+
       - uses: actions/checkout@v4
 
-      - run: echo "Deploying to DEV"
+      - uses: databricks/setup-cli@main
+
+      - name: Deploy Bundle
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          databricks bundle deploy -t dev
