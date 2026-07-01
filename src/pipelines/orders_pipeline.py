@@ -3,7 +3,7 @@ from pyspark.sql.functions import upper, current_timestamp, sum
 
 # Bronze Layer
 @dp.table(
-    name="bronze_orders"
+    name="bronze_orders01"
 )
 def bronze_orders():
 
@@ -17,12 +17,12 @@ def bronze_orders():
 
 # Silver Layer
 @dp.table(
-    name="silver_orders"
+    name="silver_orders01"
 )
 def silver_orders():
 
     return (
-        spark.readStream.table("bronze_orders")
+        spark.readStream.table("bronze_orders01")
             .filter("amount > 500")
             .withColumn("city", upper("city"))
             .withColumn("ingestion_time", current_timestamp())
@@ -31,12 +31,12 @@ def silver_orders():
 
 # Gold Layer
 @dp.table(
-    name="gold_customer_sales"
+    name="gold_customer_sales01"
 )
 def gold_customer_sales():
 
     return (
-        spark.read.table("silver_orders")
+        spark.read.table("silver_orders01")
             .groupBy("customer")
             .agg(sum("amount").alias("total_sales"))
     )
