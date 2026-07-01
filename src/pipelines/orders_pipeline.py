@@ -11,7 +11,7 @@ def bronze_orders():
         spark.readStream
             .format("cloudFiles")
             .option("cloudFiles.format", "json")
-            .load("/Volumes/demo_schema/default/demo/source/")
+            .load("/Volumes/main/default/demo/source/")
     )
 
 
