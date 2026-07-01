@@ -5,20 +5,15 @@ include:
   - resources/*.yml
 
 targets:
-
   dev:
-
-    defaul*: true
-
+    default: true
     workspace:
-      host:*https://dev-workspace.cloud.databricks.com
+      host: https://dev-workspace.cloud.databricks.com
 
   qa:
-
     workspace:
-   *  host: https://qa-workspace.cloud.databricks.com
+      host: https://qa-workspace.cloud.databricks.com
 
   prod:
-
-    works*ace:
+    workspace:
       host: https://prod-workspace.cloud.databricks.com
