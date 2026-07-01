@@ -23,7 +23,7 @@ def silver_orders():
 
     return (
         spark.readStream.table("bronze_orders")
-            .filter("amount > 300")
+            .filter("amount > 500")
             .withColumn("city", upper("city"))
             .withColumn("ingestion_time", current_timestamp())
     )
