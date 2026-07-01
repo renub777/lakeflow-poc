@@ -1,7 +1,7 @@
 resources:
   pipelines:
     orders_pipeline:
-      name: orders_pipeline
+      name: orders_pipeline01
 
       catalog: demo_schema
       schema: default
