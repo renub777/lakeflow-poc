@@ -3,8 +3,8 @@ resources:
     orders_pipeline:
       name: orders_pipeline
 
-      catalog: main
-      schema: sales
+      catalog: demo_schema
+      schema: default
 
       serverless: true
 
