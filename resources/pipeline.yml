@@ -13,4 +13,4 @@ resources:
 
       libraries:
         - file:
-            path: ../src/pipelines/orders_pipeline.py
+            path: ../src/pipelines/orders_pipeline01.py
