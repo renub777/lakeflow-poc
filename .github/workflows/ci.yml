@@ -12,4 +12,3 @@ jobs:
 
       - name: Test
         run: echo "CI executed successfully"
-`
