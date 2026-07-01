@@ -8,12 +8,4 @@ targets:
   dev:
     default: true
     workspace:
-      host: https://dev-workspace.cloud.databricks.com
-
-  qa:
-    workspace:
-      host: https://qa-workspace.cloud.databricks.com
-
-  prod:
-    workspace:
-      host: https://prod-workspace.cloud.databricks.com
+      host: https://dbc-1dca7c31-775c.cloud.databricks.com/browse?o=7474655308425684
