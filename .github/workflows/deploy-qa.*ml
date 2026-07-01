@@ -1,0 +1,27 @@
+name: Deploy QA
+
+o*:
+
+  push:
+
+    branches:
+      - *elease
+
+jobs:
+
+  deploy:
+
+    runs*on: ubuntu-latest
+
+    steps:
+
+   *  - uses: actions/checkout@v4
+
+   *  - uses: databricks/setup-cli@mai*
+
+      - name: Deploy Bundle
+    *   env:
+          DATABRICKS_HOST:*${{ secrets.DATABRICKS_HOST_QA }}
+*         DATABRICKS_TOKEN: ${{ sec*ets.DATABRICKS_TOKEN_QA }}
+       *run: |
+          databricks bundle*deploy -t qa
