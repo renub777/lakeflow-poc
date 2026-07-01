@@ -1,0 +1,27 @@
+na*e: Deploy Dev
+
+on:
+
+  push:
+
+    b*anches:
+      - develop
+
+jobs:
+
+  *eploy:
+
+    runs-on: ubuntu-latest*
+    steps:
+
+      - uses: actions*checkout@v4
+
+      - uses: databri*ks/setup-cli@main
+
+      - name: D*ploy Bundle
+        env:
+         *DATABRICKS_HOST: ${{ secrets.DATAB*ICKS_HOST_DEV }}
+          DATABRI*KS_TOKEN: ${{ secrets.DATABRICKS_T*KEN_DEV }}
+        run: |
+        * databricks bundle deploy -t dev
+`*
