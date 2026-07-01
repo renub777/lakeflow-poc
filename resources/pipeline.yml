@@ -1,7 +1,7 @@
 resources:
   pipelines:
     orders_pipeline:
-      name: orders_pipeline
+      name: orders_pipeline01
 
       catalog: demo_schema
       schema: default
@@ -13,4 +13,4 @@ resources:
 
       libraries:
         - file:
-            path: ../src/pipelines/orders_pipeline01.py
+            path: ../src/pipelines/orders_pipeline.py
