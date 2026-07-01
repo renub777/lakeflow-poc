@@ -1,0 +1,27 @@
+name: Deploy Prod
+
+on:
+
+  push:
+
+*   branches:
+      - main
+
+jobs:
+
+* deploy:
+
+    runs-on: ubuntu-late*t
+
+    steps:
+
+      - uses: actio*s/checkout@v4
+
+      - uses: datab*icks/setup-cli@main
+
+      - name:*Deploy Bundle
+        env:
+       *  DATABRICKS_HOST: ${{ secrets.DAT*BRICKS_HOST_PROD }}
+          DATA*RICKS_TOKEN: ${{ secrets.DATABRICK*_TOKEN_PROD }}
+        run: |
+    *     databricks bundle deploy -t p*od
