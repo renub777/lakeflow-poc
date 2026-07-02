@@ -1,7 +1,7 @@
 from pyspark import pipelines as dp
 from pyspark.sql.functions import upper, current_timestamp, sum
 
-# Bronze Layer
+# Bronze Layers
 @dp.table(
     name="bronze_orders02"
 )
@@ -15,7 +15,7 @@ def bronze_orders():
     )
 
 
-# Silver Layer
+# Silver Layers
 @dp.table(
     name="silver_orders02"
 )
