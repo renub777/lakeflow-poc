@@ -12,4 +12,4 @@ targets:
       host: https://dbc-1dca7c31-775c.cloud.databricks.com
 
     run_as:
-      service_principal_name: sp-databricks-cicd
+      service_principal_name: 70b2d8ca-e4b4-4e35-80e4-83d4c9f8027e
