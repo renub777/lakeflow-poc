@@ -7,5 +7,9 @@ include:
 targets:
   dev:
     default: true
+
     workspace:
       host: https://dbc-1dca7c31-775c.cloud.databricks.com
+
+    run_as:
+      service_principal_name: sp-databricks-cicd
