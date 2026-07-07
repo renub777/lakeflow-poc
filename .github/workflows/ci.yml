@@ -17,4 +17,4 @@ jobs:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
         run: |
-          databricks bundle validate -t dev
+          databricks bundle validate -t invalid
